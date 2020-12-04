@@ -21,12 +21,11 @@ class CLI
     elsif user_command == 'help' || user_command.empty?
       @expenses.help
     elsif user_command == 'search'
-      @expenses.search(argv[1])
+      @expenses.search(argv[1..-1].join(' '))
     end
   end
 
 end
-
 
 class ExpenseData
   def initialize 
@@ -57,7 +56,7 @@ class ExpenseData
   end
 
   def search(search_term)
-    results = @expensesdb.exec_params("SELECT * FROM expenses WHERE memo LIKE $1", ["%#{search_term}%"])
+    results = @expensesdb.exec_params("SELECT * FROM expenses WHERE memo=$1", ["#{search_term}"])
     format_print_result(results)
   end
 
