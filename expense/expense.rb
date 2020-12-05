@@ -12,6 +12,12 @@ class CLI
 
     if user_command == 'list' 
       @expenses.list_expense
+    elsif user_command == 'delete'
+      if @expenses.id_exists?(argv[1])
+        @expenses.delete_expense(argv[1])
+      else
+        puts "There is no expense with the id '#{argv[1]}'."
+      end
     elsif user_command == 'add'
       if argv.length == 3
         @expenses.add_expense(argv[1], argv[2])
@@ -32,8 +38,19 @@ class ExpenseData
     @expensesdb = PG::connect(dbname: 'expenses')
   end
 
+  def id_exists?(request_id)
+    @expensesdb.exec_params("SELECT id FROM expenses").values.include?([request_id])
+  end
+
   def add_expense (cost, memo_text)
     @expensesdb.exec_params("INSERT INTO expenses (created_on, amount, memo) VALUES (NOW(), $1, $2)", [cost, memo_text])
+  end
+
+  def delete_expense(row_id_to_be_deleted)
+    row = @expensesdb.exec_params("SELECT * FROM expenses WHERE id=$1", [row_id_to_be_deleted])
+    puts "The following expense has been deleted:"
+    format_print_result(row)
+    @expensesdb.exec_params("DELETE FROM expenses WHERE id=$1", [row_id_to_be_deleted])
   end
 
   def list_expense
