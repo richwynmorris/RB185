@@ -13,17 +13,9 @@ class CLI
     if user_command == 'list' 
       @expenses.list_expense
     elsif user_command == 'delete'
-      if @expenses.id_exists?(argv[1])
-        @expenses.delete_expense(argv[1])
-      else
-        puts "There is no expense with the id '#{argv[1]}'."
-      end
+      check_delete_item_exists(argv[1])
     elsif user_command == 'add'
-      if argv.length == 3
-        @expenses.add_expense(argv[1], argv[2])
-      else 
-        puts "You must provide an amount and memo."
-      end
+      check_correct_add_arguments(argv)
     elsif user_command == 'help' || user_command.empty?
       @expenses.help
     elsif user_command == 'search'
@@ -31,6 +23,21 @@ class CLI
     end
   end
 
+  def check_delete_item_exists(item)
+    if @expenses.id_exists?(item)
+      @expenses.delete_expense(item)
+    else
+      puts "There is no expense with the id '#{item}'."
+    end
+  end
+
+  def check_correct_add_arguments(items)
+    if items.length == 3
+      @expenses.add_expense(items[1], items[2])
+    else 
+      puts "You must provide an amount and memo."
+    end
+  end
 end
 
 class ExpenseData
