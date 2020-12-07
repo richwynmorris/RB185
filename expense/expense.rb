@@ -14,6 +14,8 @@ class CLI
       @expenses.list_expense
     elsif user_command == 'delete'
       check_delete_item_exists(argv[1])
+    elsif user_command == 'clear'
+      @expenses.delete_all_expenses
     elsif user_command == 'add'
       check_correct_add_arguments(argv)
     elsif user_command == 'help' || user_command.empty?
@@ -82,6 +84,16 @@ class ExpenseData
   def search(search_term)
     results = @expensesdb.exec_params("SELECT * FROM expenses WHERE memo=$1", ["#{search_term}"])
     format_print_result(results)
+  end
+
+  def delete_all_expenses
+    puts "This will remove all expenses. Are you sure? (y/n)"
+    answer = STDIN.gets.chomp.downcase
+    if answer == 'y'
+      @expensesdb.exec("DELETE FROM expenses;")
+      system 'clear'
+      puts 'All expenses have been deleted.'
+    end
   end
 
   private
