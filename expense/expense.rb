@@ -45,6 +45,7 @@ end
 class ExpenseData
   def initialize 
     @expensesdb = PG::connect(dbname: 'expenses')
+    setup_schema
   end
 
   def id_exists?(request_id)
@@ -64,7 +65,42 @@ class ExpenseData
 
   def list_expense
     recall_information = @expensesdb.exec "SELECT * FROM expenses ORDER BY created_on ASC;"
-    format_print_result(recall_information)
+    if recall_information.values.empty?
+      puts "There are no expenses."
+    else
+      format_print_result(recall_information)
+      calculate_expenses
+    end
+  end
+
+  def search(search_term)
+    results = @expensesdb.exec_params("SELECT * FROM expenses WHERE memo=$1", ["#{search_term}"])
+    if results.values.empty?
+      puts "There are no expenses."
+    else
+      format_print_result(results)
+      calculate_expenses(search_term)
+    end
+  end
+
+  def calculate_expenses(search_term=nil)
+    puts "--------------------------------------------------"
+    if search_term == nil
+      total = @expensesdb.exec "SELECT SUM(amount) FROM expenses"
+    else
+      total = @expensesdb.exec_params "SELECT SUM(amount) FROM expenses WHERE memo=$1", ["#{search_term}"]
+    end
+    puts "Total:                 #{total.values[0].join}"
+  end
+
+  def delete_all_expenses
+    puts "This will remove all expenses. Are you sure? (y/n)"
+    answer = STDIN.gets.chomp.downcase
+    if answer == 'y'
+      @expensesdb.exec("DELETE FROM expenses;")
+      system 'clear'
+      puts 'All expenses have been deleted.'
+    end
   end
 
   def help
@@ -81,27 +117,19 @@ class ExpenseData
     TEXT
   end
 
-  def search(search_term)
-    results = @expensesdb.exec_params("SELECT * FROM expenses WHERE memo=$1", ["#{search_term}"])
-    format_print_result(results)
-  end
-
-  def delete_all_expenses
-    puts "This will remove all expenses. Are you sure? (y/n)"
-    answer = STDIN.gets.chomp.downcase
-    if answer == 'y'
-      @expensesdb.exec("DELETE FROM expenses;")
-      system 'clear'
-      puts 'All expenses have been deleted.'
-    end
-  end
-
   private
 
   def format_print_result(pg_result)
       pg_result.values.each do |value|
         puts "#{value[0]} | #{value[3]}| #{value[1].rjust(11)}| #{value[2]}"
       end
+  end
+
+  def setup_schema
+    check_preexisting_table_schema = @expensesdb.exec ("SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'expenses';")
+    if check_preexisting_table_schema.values.flatten[0] == 0
+      @expensesdb.exec ("CREATE TABLE expenses (id serial PRIMARY KEY, created_on date DEFAULT NOW() NOT NULL, amount numeric NOT NULL, memo text NOT NULL);")
+    end
   end
 end
 
